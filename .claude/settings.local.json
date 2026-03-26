@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/MyProjects/**)",
+      "Bash(npx create-next-app@latest MathPaste --typescript --tailwind --eslint --app --turbopack --src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npx create-next-app@latest mathpaste --typescript --tailwind --eslint --app --turbopack --src-dir --import-alias \"@/*\" --yes)"
+    ]
+  }
+}
