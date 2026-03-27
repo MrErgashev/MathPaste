@@ -17,7 +17,12 @@ export default function MathBlock({ latex, displayMode }: MathBlockProps) {
   if (displayMode) {
     return (
       <div
-        className="my-4 rounded-xl border-l-4 border-indigo-500 bg-gradient-to-br from-indigo-50/60 to-violet-50/60 px-5 py-4 overflow-x-auto"
+        className="my-4 rounded-xl border-l-4 px-5 py-4 overflow-x-auto transition-shadow duration-200 hover:shadow-md"
+        style={{
+          borderColor: 'var(--math-border)',
+          background: `linear-gradient(135deg, var(--math-bg-from), var(--math-bg-to))`,
+          boxShadow: 'var(--shadow-sm)',
+        }}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );

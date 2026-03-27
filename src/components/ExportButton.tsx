@@ -32,15 +32,27 @@ export default function ExportButton({ segments }: ExportButtonProps) {
       disabled={disabled || isExporting}
       className={`
         flex items-center gap-2 px-5 py-2.5 rounded-xl font-sans text-sm font-medium
-        transition-all duration-200 shadow-lg
+        transition-all duration-300
         ${
           disabled
-            ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+            ? "bg-[var(--accent-soft)] text-[var(--text-tertiary)] cursor-not-allowed shadow-none border border-[var(--border)]"
             : isExporting
-              ? "bg-indigo-400 text-white cursor-wait"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/25 hover:-translate-y-0.5 active:translate-y-0"
+              ? "text-white cursor-wait shadow-lg"
+              : "text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
         }
       `}
+      style={
+        !disabled
+          ? {
+              background: isExporting
+                ? "linear-gradient(135deg, #818CF8, #A78BFA)"
+                : "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              boxShadow: isExporting
+                ? "0 4px 16px rgba(99, 102, 241, 0.3)"
+                : "0 4px 16px rgba(99, 102, 241, 0.25)",
+            }
+          : undefined
+      }
     >
       {isExporting ? (
         <>

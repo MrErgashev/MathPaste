@@ -4,11 +4,170 @@
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
-  --color-primary: #3730A3;
-  --color-accent: #7C3AED;
+  --color-primary: #6366F1;
+  --color-accent: #8B5CF6;
 }
 
-/* KaTeX display math styling */
+/* ===== THEME SYSTEM ===== */
+
+:root {
+  /* Surfaces */
+  --bg-primary: #F5F6FA;
+  --bg-secondary: #EDEEF5;
+  --bg-tertiary: #FFFFFF;
+  --bg-editor: #FAFBFF;
+  --bg-preview: #FFFFFF;
+  --surface-elevated: rgba(255, 255, 255, 0.8);
+
+  /* Text */
+  --text-primary: #1A1A2E;
+  --text-secondary: #4A4A6A;
+  --text-tertiary: #8888AA;
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border: rgba(99, 102, 241, 0.1);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-accent: rgba(99, 102, 241, 0.3);
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  /* Accents */
+  --accent-gradient: linear-gradient(135deg, #6366F1, #8B5CF6);
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --accent-soft: rgba(99, 102, 241, 0.08);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(99, 102, 241, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(99, 102, 241, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(99, 102, 241, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06);
+
+  /* Math block */
+  --math-bg-from: rgba(238, 242, 255, 0.8);
+  --math-bg-to: rgba(245, 243, 255, 0.6);
+  --math-border: #818CF8;
+
+  /* Code block */
+  --code-bg: #F3F4F8;
+  --code-border: #E2E4ED;
+  --code-text: #4338CA;
+
+  /* Status */
+  --step-active-bg: rgba(99, 102, 241, 0.1);
+  --step-active-text: #6366F1;
+  --step-inactive-text: #A0A0B8;
+  --step-connector-active: rgba(99, 102, 241, 0.3);
+  --step-connector-inactive: rgba(0, 0, 0, 0.08);
+  --meta-pill-bg: rgba(99, 102, 241, 0.06);
+
+  /* Editor */
+  --editor-placeholder: #B0B0C8;
+  --editor-line-count-bg: rgba(99, 102, 241, 0.04);
+
+  /* Table */
+  --table-header-bg: #F3F4F8;
+  --table-border: #E2E4ED;
+  --table-cell-text: #4A4A6A;
+
+  /* Misc */
+  --empty-state-opacity: 0.25;
+  --selection-bg: rgba(99, 102, 241, 0.15);
+  --textarea-selection-bg: rgba(99, 102, 241, 0.2);
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Surfaces */
+  --bg-primary: #0B0B1A;
+  --bg-secondary: #10102A;
+  --bg-tertiary: #161636;
+  --bg-editor: #0D0D1E;
+  --bg-preview: #111128;
+  --surface-elevated: rgba(22, 22, 54, 0.8);
+
+  /* Text */
+  --text-primary: #E8E8F4;
+  --text-secondary: #A0A0C4;
+  --text-tertiary: #606084;
+  --text-inverse: #0B0B1A;
+
+  /* Borders */
+  --border: rgba(99, 102, 241, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-accent: rgba(139, 92, 246, 0.4);
+
+  /* Glass */
+  --glass-bg: rgba(11, 11, 26, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.07);
+
+  /* Accents */
+  --accent-glow: rgba(99, 102, 241, 0.2);
+  --accent-soft: rgba(99, 102, 241, 0.1);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.35);
+
+  /* Math block */
+  --math-bg-from: rgba(49, 46, 129, 0.25);
+  --math-bg-to: rgba(76, 29, 149, 0.15);
+  --math-border: #6366F1;
+
+  /* Code block */
+  --code-bg: rgba(99, 102, 241, 0.08);
+  --code-border: rgba(99, 102, 241, 0.15);
+  --code-text: #A5B4FC;
+
+  /* Status */
+  --step-active-bg: rgba(99, 102, 241, 0.15);
+  --step-active-text: #A5B4FC;
+  --step-inactive-text: #484868;
+  --step-connector-active: rgba(99, 102, 241, 0.35);
+  --step-connector-inactive: rgba(255, 255, 255, 0.06);
+  --meta-pill-bg: rgba(255, 255, 255, 0.05);
+
+  /* Editor */
+  --editor-placeholder: #484868;
+  --editor-line-count-bg: rgba(255, 255, 255, 0.03);
+
+  /* Table */
+  --table-header-bg: rgba(99, 102, 241, 0.08);
+  --table-border: rgba(99, 102, 241, 0.12);
+  --table-cell-text: #A0A0C4;
+
+  /* Misc */
+  --empty-state-opacity: 0.15;
+  --selection-bg: rgba(99, 102, 241, 0.25);
+  --textarea-selection-bg: rgba(99, 102, 241, 0.3);
+
+  color-scheme: dark;
+}
+
+/* ===== THEME TRANSITIONS ===== */
+
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Exclude elements that need their own transitions */
+button,
+a,
+textarea,
+.no-theme-transition {
+  transition-property: all;
+  transition-duration: 0.2s;
+}
+
+/* ===== KaTeX ===== */
+
 .katex-display {
   margin: 0 !important;
 }
@@ -17,7 +176,8 @@
   font-size: 1.05em;
 }
 
-/* Smooth animations */
+/* ===== ANIMATIONS ===== */
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -29,11 +189,63 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(99, 102, 241, 0.08);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
 .animate-fade-up {
   animation: fadeUp 0.3s ease forwards;
 }
 
-/* Prose container for preview */
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}
+
+.animate-glow {
+  animation: glow 2.5s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ===== PROSE ===== */
+
 .prose-container p {
   margin-bottom: 0.5rem;
 }
@@ -44,26 +256,64 @@
   font-family: var(--font-sans);
 }
 
-/* Selection color */
+/* ===== SELECTION ===== */
+
 ::selection {
-  background: rgba(55, 48, 163, 0.2);
+  background: var(--selection-bg);
 }
 
 textarea::selection {
-  background: rgba(99, 102, 241, 0.3);
+  background: var(--textarea-selection-bg);
 }
 
-/* Scrollbar styling */
+/* ===== SCROLLBAR ===== */
+
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.2);
+  background: rgba(128, 128, 128, 0.15);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(128, 128, 128, 0.4);
+}
+
+/* ===== DIVIDER ===== */
+
+.panel-divider {
+  position: relative;
+}
+
+.panel-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.panel-divider:hover::after {
+  opacity: 1;
 }
