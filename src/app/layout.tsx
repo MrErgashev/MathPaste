@@ -36,6 +36,17 @@ export const metadata: Metadata = {
   ],
 };
 
+// Inline script to prevent FOUC (Flash of Unstyled Content)
+const themeScript = `
+  (function() {
+    try {
+      var theme = localStorage.getItem('mathpaste-theme');
+      var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) document.documentElement.classList.add('dark');
+    } catch(e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,7 +56,11 @@ export default function RootLayout({
     <html
       lang="uz"
       className={`${dmSans.variable} ${newsreader.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

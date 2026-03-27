@@ -10,18 +10,18 @@ interface PreviewPanelProps {
 export default function PreviewPanel({ content }: PreviewPanelProps) {
   if (!content || content.segments.length === 0) {
     return (
-      <div className="flex flex-col h-full bg-[#faf9f6] items-center justify-center px-8">
+      <div className="flex flex-col h-full bg-[var(--bg-preview)] items-center justify-center px-8">
         <div className="text-center max-w-xs">
-          <div className="text-6xl mb-4 opacity-30">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-indigo-400 mx-auto">
+          <div className="animate-float" style={{ opacity: 'var(--empty-state-opacity)' }}>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-indigo-500 mx-auto">
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
           </div>
-          <p className="text-gray-400 text-sm font-sans">
+          <p className="text-[var(--text-tertiary)] text-sm font-sans mt-4">
             Natija bu yerda ko&apos;rinadi
           </p>
-          <p className="text-gray-300 text-xs font-sans mt-1">
+          <p className="text-[var(--text-tertiary)] text-xs font-sans mt-1 opacity-60">
             Formulalar xuddi originaldagidek renderlanadi
           </p>
         </div>
@@ -33,25 +33,28 @@ export default function PreviewPanel({ content }: PreviewPanelProps) {
   const groups = groupSegments(content.segments);
 
   return (
-    <div className="flex flex-col h-full bg-[#faf9f6]">
+    <div className="flex flex-col h-full bg-[var(--bg-preview)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
+        <div className="flex items-center gap-2.5">
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="text-sm font-medium text-gray-500 font-sans">
+          <span className="text-sm font-medium text-[var(--text-tertiary)] font-sans">
             Ko&apos;rish
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
-          <span>{content.metadata.formulaCount} formula</span>
-          <span>·</span>
-          <span>{content.metadata.parseTimeMs.toFixed(0)}ms</span>
+        <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] font-mono">
+          <span className="px-2 py-0.5 rounded-md bg-[var(--accent-soft)]">
+            {content.metadata.formulaCount} formula
+          </span>
+          <span className="px-2 py-0.5 rounded-md bg-[var(--accent-soft)]">
+            {content.metadata.parseTimeMs.toFixed(0)}ms
+          </span>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
-        <div className="max-w-none prose-container font-serif text-gray-800 leading-relaxed">
+        <div className="max-w-none prose-container font-serif text-[var(--text-primary)] leading-relaxed">
           {groups.map((group, i) => (
             <GroupRenderer key={i} group={group} />
           ))}
@@ -129,7 +132,7 @@ function BlockRenderer({ segment }: { segment: ContentSegment }) {
         6: "text-sm font-semibold italic mt-2 mb-1",
       };
       return (
-        <Tag className={`${sizes[segment.level || 1]} text-gray-900 font-sans`}>
+        <Tag className={`${sizes[segment.level || 1]} text-[var(--text-primary)] font-sans`}>
           <InlineContent text={segment.content} />
         </Tag>
       );
@@ -140,8 +143,8 @@ function BlockRenderer({ segment }: { segment: ContentSegment }) {
 
     case "code":
       return (
-        <pre className="bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 my-3 overflow-x-auto">
-          <code className="text-sm font-mono text-gray-800">
+        <pre className="bg-[var(--code-bg)] border border-[var(--code-border)] rounded-xl px-4 py-3 my-3 overflow-x-auto">
+          <code className="text-sm font-mono text-[var(--text-secondary)]">
             {segment.content}
           </code>
         </pre>
@@ -150,7 +153,7 @@ function BlockRenderer({ segment }: { segment: ContentSegment }) {
     case "list-item":
       return (
         <div className="flex gap-2 mb-1 pl-4">
-          <span className="text-gray-400 select-none">•</span>
+          <span className="text-indigo-400 select-none">•</span>
           <span className="text-[15px]">
             <InlineContent text={segment.content} />
           </span>
@@ -194,7 +197,7 @@ function InlineContent({ text }: { text: string }) {
         }
         if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
           return (
-            <code key={i} className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-700">
+            <code key={i} className="bg-[var(--code-bg)] px-1.5 py-0.5 rounded text-sm font-mono text-[var(--code-text)] border border-[var(--code-border)]">
               {part.slice(1, -1)}
             </code>
           );
@@ -252,16 +255,16 @@ function InlineTextWithBareMath({ text }: { text: string }) {
 function TableRenderer({ content }: { content: string }) {
   const rows = parseTableRows(content);
   if (!rows || rows.length === 0) {
-    return <p className="text-gray-500">{content}</p>;
+    return <p className="text-[var(--text-tertiary)]">{content}</p>;
   }
 
   return (
-    <div className="overflow-x-auto my-3">
+    <div className="overflow-x-auto my-3 rounded-xl border border-[var(--table-border)]">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
             {rows[0].map((cell, i) => (
-              <th key={i} className="border border-gray-300 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-700">
+              <th key={i} className="border-b border-[var(--table-border)] bg-[var(--table-header-bg)] px-3 py-2.5 text-left font-semibold text-[var(--text-primary)]">
                 {cell}
               </th>
             ))}
@@ -269,9 +272,9 @@ function TableRenderer({ content }: { content: string }) {
         </thead>
         <tbody>
           {rows.slice(1).map((row, i) => (
-            <tr key={i}>
+            <tr key={i} className="border-b border-[var(--border-subtle)] last:border-b-0">
               {row.map((cell, j) => (
-                <td key={j} className="border border-gray-300 px-3 py-2 text-gray-600">
+                <td key={j} className="px-3 py-2 text-[var(--table-cell-text)]">
                   {cell}
                 </td>
               ))}
