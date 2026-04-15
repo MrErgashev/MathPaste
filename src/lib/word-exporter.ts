@@ -1,98 +1,76 @@
-import { ContentSegment } from "./types";
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  HeadingLevel,
+  ImportedXmlComponent,
+  Packer,
+  Paragraph,
+  ParagraphChild,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+} from "docx";
+import type { IRunOptions } from "docx";
+import { mml2omml } from "mathml2omml";
+import type { ContentSegment } from "./types";
 import { renderMathToMathML } from "./katex-renderer";
+
+const BODY_FONT = "Cambria";
+const MATH_FONT = "Cambria Math";
+const MONO_FONT = "Consolas";
+const WORD_DOCX_MIME =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 /**
  * F4: Word Export
- * Generates a .doc file (HTML with Office namespaces + MathML).
- * Word opens this and converts MathML to native editable equations.
+ * Generates a real .docx file with Word-native OMML equations.
  */
-export function generateWordDocument(segments: ContentSegment[]): Blob {
-  const bodyHtml = segments.map(segmentToHtml).join("\n");
+export async function generateWordDocument(
+  segments: ContentSegment[]
+): Promise<Blob> {
+  const doc = new Document({
+    creator: "MathPaste",
+    title: "MathPaste",
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: BODY_FONT,
+            size: 24,
+          },
+          paragraph: {
+            spacing: { after: 120, line: 360 },
+          },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 1440,
+              right: 1440,
+              bottom: 1440,
+              left: 1440,
+            },
+          },
+        },
+        children: segmentsToDocChildren(segments),
+      },
+    ],
+  });
 
-  const fullHtml = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:w="urn:schemas-microsoft-com:office:word"
-      xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8">
-<meta name="ProgId" content="Word.Document">
-<meta name="Generator" content="MathPaste">
-<!--[if gte mso 9]>
-<xml>
-<w:WordDocument>
-  <w:View>Print</w:View>
-  <w:Zoom>100</w:Zoom>
-  <w:DoNotOptimizeForBrowser/>
-</w:WordDocument>
-</xml>
-<![endif]-->
-<style>
-  @page {
-    size: A4;
-    margin: 2.5cm;
-  }
-  body {
-    font-family: 'Cambria', 'Times New Roman', serif;
-    font-size: 12pt;
-    line-height: 1.6;
-    color: #000000;
-  }
-  h1 { font-size: 18pt; font-weight: bold; margin: 18pt 0 6pt 0; }
-  h2 { font-size: 16pt; font-weight: bold; margin: 14pt 0 6pt 0; }
-  h3 { font-size: 14pt; font-weight: bold; margin: 12pt 0 4pt 0; }
-  h4 { font-size: 13pt; font-weight: bold; margin: 10pt 0 4pt 0; }
-  h5 { font-size: 12pt; font-weight: bold; margin: 8pt 0 4pt 0; }
-  h6 { font-size: 12pt; font-weight: bold; font-style: italic; margin: 8pt 0 4pt 0; }
-  p { margin: 0 0 6pt 0; }
-  .display-math {
-    text-align: center;
-    margin: 12pt 0;
-    font-family: 'Cambria Math', 'Cambria', serif;
-  }
-  .inline-math {
-    font-family: 'Cambria Math', 'Cambria', serif;
-  }
-  pre, code {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 10pt;
-    background-color: #f5f5f5;
-    padding: 2px 4px;
-  }
-  pre {
-    padding: 8pt;
-    border: 1px solid #e0e0e0;
-    white-space: pre-wrap;
-    margin: 8pt 0;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 8pt 0;
-  }
-  td, th {
-    border: 1px solid #999999;
-    padding: 4pt 8pt;
-    font-size: 11pt;
-  }
-  th {
-    background-color: #f0f0f0;
-    font-weight: bold;
-  }
-  ul, ol { margin: 4pt 0 4pt 24pt; }
-  li { margin: 2pt 0; }
-</style>
-</head>
-<body>
-${bodyHtml}
-</body>
-</html>`;
-
-  return new Blob([fullHtml], { type: "application/msword" });
+  return Packer.toBlob(doc);
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(
+    blob.type === WORD_DOCX_MIME ? blob : new Blob([blob], { type: WORD_DOCX_MIME })
+  );
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -102,117 +80,393 @@ export function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-function segmentToHtml(segment: ContentSegment): string {
+function segmentsToDocChildren(segments: ContentSegment[]): (Paragraph | Table)[] {
+  const children: (Paragraph | Table)[] = [];
+  let paragraphSegments: ContentSegment[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphSegments.length === 0) return;
+
+    const paragraphs = paragraphSegmentsToParagraphs(paragraphSegments);
+    children.push(...paragraphs);
+    paragraphSegments = [];
+  };
+
+  for (const segment of segments) {
+    if (segment.type === "text" || segment.type === "inline-math") {
+      if (segment.type === "text" && segment.content === "\n") {
+        flushParagraph();
+        continue;
+      }
+
+      paragraphSegments.push(segment);
+      continue;
+    }
+
+    flushParagraph();
+    children.push(...blockSegmentToDocChildren(segment));
+  }
+
+  flushParagraph();
+
+  if (children.length === 0) {
+    children.push(new Paragraph(""));
+  }
+
+  return children;
+}
+
+function blockSegmentToDocChildren(segment: ContentSegment): (Paragraph | Table)[] {
   switch (segment.type) {
-    case "text":
-      return textToHtml(segment.content);
+    case "heading":
+      return [headingToParagraph(segment)];
 
-    case "heading": {
-      const level = segment.level || 1;
-      const tag = `h${Math.min(level, 6)}`;
-      // Process bold/italic formatting in heading content
-      let headingHtml = escapeHtml(segment.content);
-      headingHtml = headingHtml.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-      headingHtml = headingHtml.replace(/\*(.+?)\*/g, "<i>$1</i>");
-      return `<${tag}>${headingHtml}</${tag}>`;
-    }
-
-    case "display-math": {
-      const mathml = renderMathToMathML(segment.content, true);
-      return `<p class="display-math">${mathml}</p>`;
-    }
-
-    case "inline-math": {
-      const mathml = renderMathToMathML(segment.content, false);
-      return `<span class="inline-math">${mathml}</span>`;
-    }
+    case "display-math":
+      return [displayMathToParagraph(segment.content)];
 
     case "code":
-      return `<pre><code>${escapeHtml(segment.content)}</code></pre>`;
+      return [codeToParagraph(segment.content)];
 
     case "list-item":
-      return `<li>${processInlineContent(segment.content)}</li>`;
+      return [listItemToParagraph(segment)];
 
     case "table":
-      return tableToHtml(segment.content);
+      return [tableToDocx(segment.content)];
 
     default:
-      return `<p>${escapeHtml(segment.content)}</p>`;
+      return paragraphSegmentsToParagraphs([segment]);
   }
 }
 
-function textToHtml(text: string): string {
-  if (text === "\n") return "";
+function paragraphSegmentsToParagraphs(
+  segments: ContentSegment[]
+): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  let children: ParagraphChild[] = [];
 
-  // Process bold and italic
-  let html = escapeHtml(text);
-  html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  html = html.replace(/\*(.+?)\*/g, "<i>$1</i>");
-  html = html.replace(/`(.+?)`/g, "<code>$1</code>");
+  const flush = () => {
+    if (children.length === 0) return;
 
-  // Process inline math $...$
-  html = processInlineContent(html);
+    paragraphs.push(
+      new Paragraph({
+        children,
+        spacing: { after: 120, line: 360 },
+      })
+    );
+    children = [];
+  };
 
-  return `<p>${html}</p>`;
-}
-
-function processInlineContent(html: string): string {
-  // Replace \(...\) with inline MathML
-  let result = html.replace(/\\\((.+?)\\\)/g, (_match, latex) => {
-    const mathml = renderMathToMathML(latex, false);
-    return `<span class="inline-math">${mathml}</span>`;
-  });
-  // Replace \[...\] with display MathML
-  result = result.replace(/\\\[(.+?)\\\]/g, (_match, latex) => {
-    const mathml = renderMathToMathML(latex, true);
-    return `</p><p class="display-math">${mathml}</p><p>`;
-  });
-  // Replace $...$ with inline MathML (but not $$)
-  result = result.replace(/(?<!\$)\$(?!\$)(.+?)\$(?!\$)/g, (_match, latex) => {
-    const mathml = renderMathToMathML(latex, false);
-    return `<span class="inline-math">${mathml}</span>`;
-  });
-  // Replace bare (...) with inline MathML when content looks like LaTeX
-  result = result.replace(/\(([^)]+)\)/g, (fullMatch, inner) => {
-    const hasLatex =
-      /\\[a-zA-Z]+/.test(inner) ||
-      /[_^]\{/.test(inner) ||
-      /[_^][a-zA-Z0-9]/.test(inner) ||
-      /\{[^}]*\}/.test(inner);
-    if (hasLatex) {
-      const mathml = renderMathToMathML(inner, false);
-      return `<span class="inline-math">${mathml}</span>`;
+  for (const segment of segments) {
+    if (segment.type === "inline-math") {
+      children.push(mathToOmml(segment.content));
+      continue;
     }
-    return fullMatch;
-  });
-  return result;
+
+    const parts = textToParagraphParts(segment.content);
+    for (const part of parts) {
+      if (part.type === "inline") {
+        children.push(...part.children);
+      } else {
+        flush();
+        paragraphs.push(displayMathToParagraph(part.latex));
+      }
+    }
+  }
+
+  flush();
+  return paragraphs;
 }
 
-function tableToHtml(jsonContent: string): string {
-  try {
-    const rows: string[][] = JSON.parse(jsonContent);
-    if (rows.length === 0) return "";
+type ParagraphPart =
+  | { type: "inline"; children: ParagraphChild[] }
+  | { type: "display"; latex: string };
 
-    let html = "<table>";
-    rows.forEach((row, i) => {
-      html += "<tr>";
-      row.forEach((cell) => {
-        const tag = i === 0 ? "th" : "td";
-        html += `<${tag}>${escapeHtml(cell)}</${tag}>`;
-      });
-      html += "</tr>";
+function textToParagraphParts(text: string): ParagraphPart[] {
+  const parts: ParagraphPart[] = [];
+  const displayRegex = /\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = displayRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      const before = text.slice(lastIndex, match.index);
+      parts.push({ type: "inline", children: inlineTextToChildren(before) });
+    }
+
+    parts.push({ type: "display", latex: (match[1] || match[2]).trim() });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({
+      type: "inline",
+      children: inlineTextToChildren(text.slice(lastIndex)),
     });
-    html += "</table>";
-    return html;
+  }
+
+  return parts.filter(
+    (part) => part.type === "display" || part.children.length > 0
+  );
+}
+
+function inlineTextToChildren(text: string): ParagraphChild[] {
+  const children: ParagraphChild[] = [];
+  const inlineRegex =
+    /\\\(([\s\S]+?)\\\)|(?<!\$)\$(?!\$)([\s\S]+?)(?<!\$)\$(?!\$)|\*\*([^*]+?)\*\*|\*([^*]+?)\*|`([^`]+?)`/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = inlineRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      children.push(...plainTextWithBareMath(text.slice(lastIndex, match.index)));
+    }
+
+    if (match[1] || match[2]) {
+      children.push(mathToOmml((match[1] || match[2]).trim()));
+    } else if (match[3]) {
+      children.push(textRun(match[3], { bold: true }));
+    } else if (match[4]) {
+      children.push(textRun(match[4], { italics: true }));
+    } else if (match[5]) {
+      children.push(
+        new TextRun({
+          text: match[5],
+          font: MONO_FONT,
+          size: 20,
+          shading: { fill: "F5F5F5", color: "auto" },
+        })
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    children.push(...plainTextWithBareMath(text.slice(lastIndex)));
+  }
+
+  return children;
+}
+
+function plainTextWithBareMath(text: string): ParagraphChild[] {
+  const children: ParagraphChild[] = [];
+  const bareMathRegex = /\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = bareMathRegex.exec(text)) !== null) {
+    const latex = match[1];
+    if (!looksLikeLatex(latex)) continue;
+
+    if (match.index > lastIndex) {
+      children.push(textRun(text.slice(lastIndex, match.index)));
+    }
+
+    children.push(mathToOmml(latex.trim()));
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    children.push(textRun(text.slice(lastIndex)));
+  }
+
+  return children;
+}
+
+function headingToParagraph(segment: ContentSegment): Paragraph {
+  const level = Math.min(Math.max(segment.level || 1, 1), 6);
+  const headingByLevel = {
+    1: HeadingLevel.HEADING_1,
+    2: HeadingLevel.HEADING_2,
+    3: HeadingLevel.HEADING_3,
+    4: HeadingLevel.HEADING_4,
+    5: HeadingLevel.HEADING_5,
+    6: HeadingLevel.HEADING_6,
+  } as const;
+  const sizeByLevel: Record<number, number> = {
+    1: 36,
+    2: 32,
+    3: 28,
+    4: 26,
+    5: 24,
+    6: 24,
+  };
+
+  return new Paragraph({
+    children: inlineTextToChildren(segment.content),
+    spacing: { before: 240, after: 120 },
+    heading: headingByLevel[level as keyof typeof headingByLevel],
+    thematicBreak: false,
+    style: undefined,
+    pageBreakBefore: false,
+    keepNext: false,
+    keepLines: false,
+    outlineLevel: level - 1,
+    bidirectional: false,
+    contextualSpacing: false,
+    run: {
+      size: sizeByLevel[level],
+      bold: true,
+      italics: level === 6,
+      font: BODY_FONT,
+    },
+  });
+}
+
+function displayMathToParagraph(latex: string): Paragraph {
+  return new Paragraph({
+    children: [mathToOmml(latex)],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 160, after: 160 },
+  });
+}
+
+function codeToParagraph(code: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text: code,
+        font: MONO_FONT,
+        size: 20,
+      }),
+    ],
+    spacing: { before: 120, after: 120 },
+    shading: { fill: "F5F5F5", color: "auto" },
+    border: {
+      top: { style: BorderStyle.SINGLE, color: "E0E0E0", size: 1 },
+      bottom: { style: BorderStyle.SINGLE, color: "E0E0E0", size: 1 },
+      left: { style: BorderStyle.SINGLE, color: "E0E0E0", size: 1 },
+      right: { style: BorderStyle.SINGLE, color: "E0E0E0", size: 1 },
+    },
+  });
+}
+
+function listItemToParagraph(segment: ContentSegment): Paragraph {
+  return new Paragraph({
+    children: [
+      textRun(segment.ordered ? "1. " : "\u2022 "),
+      ...inlineTextToChildren(segment.content),
+    ],
+    indent: { left: 360, hanging: 180 },
+    spacing: { after: 80 },
+  });
+}
+
+function tableToDocx(jsonContent: string): Table {
+  let rows: string[][];
+
+  try {
+    rows = JSON.parse(jsonContent);
   } catch {
-    return `<p>${escapeHtml(jsonContent)}</p>`;
+    rows = [[jsonContent]];
+  }
+  if (rows.length === 0) {
+    rows = [[""]];
+  }
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+      bottom: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+      left: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+      right: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, color: "999999", size: 1 },
+    },
+    rows: rows.map(
+      (row, rowIndex) =>
+        new TableRow({
+          children: row.map(
+            (cell) =>
+              new TableCell({
+                shading:
+                  rowIndex === 0 ? { fill: "F0F0F0", color: "auto" } : undefined,
+                children: [
+                  new Paragraph({
+                    children: inlineTextToChildren(cell),
+                    spacing: { after: 0 },
+                  }),
+                ],
+              })
+          ),
+        })
+    ),
+  });
+}
+
+function mathToOmml(latex: string): ParagraphChild {
+  try {
+    const mathml = stripMathAnnotations(renderMathToMathML(latex, true));
+    const omml = mml2omml(mathml);
+    return ommlToXmlComponent(omml) as unknown as ParagraphChild;
+  } catch {
+    return textRun(latex, {
+      font: MATH_FONT,
+      italics: true,
+    });
   }
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function ommlToXmlComponent(omml: string): ImportedXmlComponent {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(omml, "application/xml");
+  const parseError = xmlDoc.querySelector("parsererror");
+
+  if (parseError) {
+    throw new Error(parseError.textContent || "Invalid OMML XML");
+  }
+
+  return xmlElementToImportedComponent(xmlDoc.documentElement);
+}
+
+function xmlElementToImportedComponent(element: Element): ImportedXmlComponent {
+  const attributes = Array.from(element.attributes).reduce<Record<string, string>>(
+    (acc, attr) => {
+      acc[attr.name] = attr.value;
+      return acc;
+    },
+    {}
+  );
+  const component = new ImportedXmlComponent(element.tagName, attributes);
+
+  for (const child of Array.from(element.childNodes)) {
+    if (child.nodeType === 1) {
+      component.push(xmlElementToImportedComponent(child as Element));
+    } else if (child.nodeType === 3 && child.nodeValue !== null) {
+      component.push(child.nodeValue);
+    }
+  }
+
+  return component;
+}
+
+function stripMathAnnotations(mathml: string): string {
+  return mathml.replace(/<annotation\b[^>]*>[\s\S]*?<\/annotation>/g, "");
+}
+
+function textRun(
+  text: string,
+  options: Partial<IRunOptions> = {}
+): TextRun {
+  return new TextRun({
+    text,
+    font: BODY_FONT,
+    size: 24,
+    ...options,
+  });
+}
+
+function looksLikeLatex(text: string): boolean {
+  return (
+    /\\[a-zA-Z]+/.test(text) ||
+    /[_^]\{/.test(text) ||
+    /[_^][a-zA-Z0-9]/.test(text) ||
+    /\\[{}\[\]()\\|]/.test(text) ||
+    /\{[^}]*\}/.test(text) ||
+    /[a-zA-Z]\s*=\s*[a-zA-Z0-9\\]/.test(text) ||
+    /[a-zA-Z]\s*[+\-]\s*[a-zA-Z]/.test(text) ||
+    /[a-zA-Z]\s*[\u2264\u2265\u2260\u2248\u00b1\u2213\u2192\u221e]/.test(text) ||
+    /\d+\s*[+\-*/]\s*\d+/.test(text)
+  );
 }

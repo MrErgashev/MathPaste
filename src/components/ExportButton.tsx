@@ -11,14 +11,14 @@ interface ExportButtonProps {
 export default function ExportButton({ segments }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!segments || segments.length === 0) return;
 
     setIsExporting(true);
     try {
-      const blob = generateWordDocument(segments);
+      const blob = await generateWordDocument(segments);
       const timestamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(blob, `MathPaste-${timestamp}.doc`);
+      downloadBlob(blob, `MathPaste-${timestamp}.docx`);
     } finally {
       setTimeout(() => setIsExporting(false), 1000);
     }
